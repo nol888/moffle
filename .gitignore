@@ -11,6 +11,7 @@ static/style.css
 *.swo
 *.stamp
 *.mo
+.idea
 
 config.py
 Makefile.appconfig
