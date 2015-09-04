@@ -85,7 +85,7 @@ class Search(Resource):
 
         return {
             'total_results': len(results),
-            'canonical_url': url_for('search', network=network, channel=channel, query=args['q']),
+            'canonical_url': url_for('search', network=network, channel=channel, text=args['q']),
             'results': results
         }
 
