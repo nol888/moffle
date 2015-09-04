@@ -50,7 +50,7 @@ def authenticated(fn):
             raise ApiNotAuthorizedException()
 
         hmac_key = config.API_KEYS[uid]
-        request_args = {k: v for k, v in request.args.items() if not (k == 'uid' or k == 'sig')}
+        request_args = {k: v for k, v in request.args.items() if not k == 'sig'}
         expected_sig = generate_hmac(hmac_key, request.path, request_args)
         if not hmac.compare_digest(sig, expected_sig):
             raise ApiNotAuthorizedException()
