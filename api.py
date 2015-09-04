@@ -16,15 +16,13 @@ import config
 from exceptions import ApiNotAuthorizedException
 
 errors = {
-    'exceptions.ApiNotAuthorizedException': {
+    'ApiNotAuthorizedException': {
         'message': "You are not authorized to access this resource.",
         'status': 403
     }
 }
-
 api = Blueprint('api', __name__)
 rest_api = flask_restful.Api(api, catch_all_404s=True, errors=errors)
-
 
 def authenticated(fn):
     def generate_hmac(key, path, args):
