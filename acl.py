@@ -2,6 +2,7 @@ from collections import namedtuple
 from copy import copy
 from itertools import chain
 
+from flask import g
 from flask import session
 import fastcache
 
@@ -141,16 +142,19 @@ class AccessControl:
                 raise RuntimeError("Spent too much time resolving parent references, probably a node has a non-existent or misspelled parent", unresolved_nodes)
 
     @property
-    def user_email(self):
+    def user_id(self):
         user = session.get('user')
 
         if not user:
-            return ''
+            if 'uid' in g:
+                return g.uid
+            else:
+                return ''
 
         return user.get('email')
 
     def evaluate(self, network, channel):
-        return self._evaluate(self.user_email, network, channel)
+        return self._evaluate(self.user_id, network, channel)
 
     @fastcache.clru_cache(maxsize=1024)
     def _evaluate(self, user, network, channel):

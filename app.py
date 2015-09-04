@@ -32,6 +32,8 @@ from grep import GrepBuilder
 
 app = Flask(__name__)
 babel = Babel(app)
+paths = getattr(log_path, config.LOG_PATH_CLASS)()
+grep = GrepBuilder(paths)
 
 @app.route('/')
 def index():
@@ -158,16 +160,13 @@ def get_locale():
         return negotiate_locale(preferred, config.LOCALE_PREFER)
 
 def create():
-    global paths, grep
-
-    paths = getattr(log_path, config.LOG_PATH_CLASS)()
-    grep = GrepBuilder(paths)
-
     util.register_context_processors(app)
     util.register_template_filters(app)
 
     from auth import auth
+    from api import api
     app.register_blueprint(auth, url_prefix='/auth')
+    app.register_blueprint(api, url_prefix='/api')
 
     app.secret_key = config.SECRET_KEY
     app.debug = config.DEBUG

@@ -6,3 +6,6 @@ class MultipleResultsException(Exception):
 
 class CanonicalNameException(Exception):
     pass
+
+class ApiNotAuthorizedException(Exception):
+    pass

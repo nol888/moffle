@@ -1,8 +1,10 @@
 cachetools
 fastcache
+oauthlib
 Flask
 Flask-Babel
 Flask-OAuthlib
+Flask-RESTful
 Flask-WTF
 mock
 natsort

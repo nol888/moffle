@@ -40,7 +40,11 @@ LOCALE_PREFER = ['ja', 'en']
 DEBUG_PROFILER = False
 DEBUG = False
 
-# 4-tuples of allow/deny, oauth email (* = all), scope (network/channel/*),
+# Map of API users to their secret key as a byte string.
+API_KEYS = {
+}
+
+# 4-tuples of allow/deny, oauth email or API user (* = all), scope (network/channel/*),
 # match (regex or *)
 # Rules are considered by their scope, then their action
 # Network scope allow/deny must be explicitly stated as channel-scope rules
