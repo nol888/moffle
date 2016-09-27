@@ -228,7 +228,7 @@ def line_style(s, line_no, is_search, network=None, ctx=None):
     timestamp = "[{h}:{m}<span class='seconds'>:{s}</span>]".format(h=h, m=m, s=s)
 
     return '<span class="{line_class}">' \
-        '<a href="{href}" id="{id_}" class="js-line-no-highlight">{timestamp}</a> ' \
+        '<a href="{href}" id="{id_}" class="js-line-no-highlight js-non-selectable">{timestamp}</a> ' \
         '<span class="{msg_user_class}">{maybe_user} ' \
         '<span class="{msg_class}">{rest}' \
         '</span>' \

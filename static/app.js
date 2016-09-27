@@ -200,3 +200,40 @@ function LoginUrl() {
         $(".js-login-url").attr('href') + encodeURIComponent(window.location.hash)
     );
 }
+
+/**
+ * Copy timestamps only if shift was held down during selection.
+ *
+ * Chrome will select and attempt to copy timestamps even if they are
+ * marked user-select:none, so instead we just end up tracking whether
+ * or not shift was released after selection is complete.
+ */
+function MaybeRemoveTimestamps() {
+    if (typeof window.getSelection == 'undefined') return;
+
+    $(window).keydown(function(e) {
+        if (e.keyCode == 16) {
+            $('.js-non-selectable').removeClass('js-non-selectable');
+        }
+    });
+    $(window).keyup(function(e) {
+        if (e.keyCode == 16 && window.getSelection().toString() == '') {
+            $('.js-line-no-highlight').addClass('js-non-selectable');
+        }
+    });
+
+    // This is still necessary because Chrome will actually include non-selectable
+    // text as part of the selection regardless...
+    $('body').on('copy', function(e) {
+        var selectionText = window.getSelection().toString().trim();
+        if ($('.js-line-no-highlight.js-non-selectable').length) {
+            selectionText = selectionText.replace(/\[\d{2}:\d{2}[^:]*:\d{2}[^\]]*\] ?/g, "");
+        }
+
+        e.originalEvent.clipboardData.setData('text/plain', selectionText);
+        e.preventDefault();
+        e.stopPropagation();
+
+        $('.js-line-no-highlight').addClass('js-non-selectable');
+    });
+}

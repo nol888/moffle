@@ -23,6 +23,7 @@
     {{ super() }}
     new AjaxSearch("{{ network }}", "{{ channel }}", "{{ author }}", "{{ query }}", {{ max_segment }});
     new MovementTooltip();
+    new MaybeRemoveTimestamps();
 {% endblock %}
 
 {% block content %}

@@ -196,6 +196,13 @@ pre {
 
 /* Log */
 
+.js-non-selectable {
+    -ms-user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
 /* Yes, this is bad and I should feel bad. */
 .page-header {
     position: relative;
