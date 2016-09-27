@@ -4,8 +4,8 @@
         {% block head %}
 
         <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-        <script src="{{ url_for('static', filename='vendor/jquery/dist/jquery.min.js') }}"></script>
-        <script src="{{ url_for('static', filename='vendor/bootstrap-sass-official/assets/javascripts/bootstrap.js') }}"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 
         <script src="{{ url_for('static', filename='app.js') }}"></script>
 
@@ -16,6 +16,7 @@
                     new Highlight();
                     new KeyboardShortcuts();
                     new LoginUrl();
+                    new CanonicalUrl("{{ g.canonical_url }}");
                 {% endblock %}
             });
         </script>

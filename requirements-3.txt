@@ -6,8 +6,8 @@ Flask-Babel
 Flask-OAuthlib
 Flask-RESTful
 Flask-WTF
+libsass
 mock
 natsort
-pyScss
 pytest
 uWSGI

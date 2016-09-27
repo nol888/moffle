@@ -6,6 +6,7 @@ import monkey_patch
 from babel import negotiate_locale
 from flask import Flask
 from flask import abort
+from flask import g
 from flask import redirect
 from flask import request
 from flask import render_template
@@ -14,8 +15,6 @@ from flask.ext.babel import Babel
 from jinja2 import FileSystemBytecodeCache
 from werkzeug.contrib.fixers import ProxyFix
 from werkzeug.contrib.profiler import ProfilerMiddleware
-
-
 
 import config
 import exceptions
@@ -29,6 +28,9 @@ import log_path
 from forms import AjaxSearchForm
 from forms import SearchForm
 from grep import GrepBuilder
+
+if config.DEBUG_PYINSTRUMENT:
+    from pyinstrument import Profiler
 
 app = Flask(__name__)
 babel = Babel(app)
@@ -60,8 +62,12 @@ def channel(network, channel):
     except exceptions.MultipleResultsException as ex:
         return render_template('error/multiple_results.html', network=network, channel=channel)
     except exceptions.CanonicalNameException as ex:
-        info_type, canonical_name = ex.args
-        return redirect(url_for('channel', network=network, channel=canonical_name))
+        _, canonical_channel = ex.args
+        dates = paths.channel_dates(network, canonical_channel)
+        g.canonical_url = url_for('channel', network=network, channel_=canonical_channel)
+        return channel_(network, canonical_channel)
+
+channel_ = channel
 
 @app.route('/<network>/<channel>/<date>')
 def log(network, channel, date):
@@ -83,7 +89,10 @@ def log(network, channel, date):
         elif info_type == util.Scope.DATE:
             date = canonical_data
 
-        return redirect(url_for('log', network=network, channel=channel, date=date))
+        g.canonical_url = url_for('log', network=network, channel=channel, date=date)
+        return log_(network, channel, date)
+
+log_ = log
 
 @app.route('/search/')
 def search():
@@ -159,6 +168,16 @@ def get_locale():
         preferred = [x.replace('-', '_') for x in request.accept_languages.values()]
         return negotiate_locale(preferred, config.LOCALE_PREFER)
 
+
+def inject_profiler():
+    request.profiler = Profiler(use_signal=False)
+    request.profiler.start()
+
+def output_profiler(response):
+    request.profiler.stop()
+    print(request.profiler.output_text(unicode=True, color=True))
+    return response
+
 def create():
     util.register_context_processors(app)
     util.register_template_filters(app)
@@ -169,7 +188,8 @@ def create():
     app.register_blueprint(api, url_prefix='/api')
 
     app.secret_key = config.SECRET_KEY
-    app.debug = config.DEBUG
+    # Produces actual debug under internal server. Produces stderr under uwsgi
+    app.debug = True
 
     # Not app.jinja_options, because ???
     # app.jinja_env.bytecode_cache = FileSystemBytecodeCache()
@@ -180,6 +200,10 @@ def create():
     if config.DEBUG_PROFILER:
         app.config['PROFILE'] = True
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
+
+    if config.DEBUG_PYINSTRUMENT:
+        app.before_request(inject_profiler)
+        app.after_request(output_profiler)
 
     return app
 

@@ -1,12 +1,9 @@
-import itertools
 import re
 
-import cachetools
 import fastcache
 import jinja2.utils
 from flask import url_for
 from jinja2 import escape
-from jinja2 import Markup
 
 import util
 
@@ -25,11 +22,10 @@ CTRL_REGEX = re.compile(r'(?:[%s%s%s])|(%s(?:\d{1,2})?,?(?:\d{1,2})?)' % (
 # Support urlization of urls with control codes immediately preceding and following
 jinja2.utils._punctuation_re = re.compile(
     '^(?P<lead>(?:%s)*)(?P<middle>.*?)(?P<trail>(?:%s)*)$' % (
-        '|'.join(map(re.escape, ('(', '<', '&lt;', CTRL_COLOR, CTRL_RESET, CTRL_UNDERLINE, CTRL_BOLD))),
-        '|'.join(map(re.escape, ('.', ',', ')', '>', '\n', '&gt;', '&#39;', '&#34;', CTRL_COLOR, CTRL_RESET, CTRL_UNDERLINE, CTRL_BOLD)))
+        '|'.join(['[\(<\x03\x0F\x1F\x02]'] + [re.escape(string) for string in ('&lt;',)]),
+        '|'.join(['[\.,\)>\n\x03\x0F\x1F\x02]'] + [re.escape(string) for string in ('&gt;', '&#39;', '&#34;')])
     )
 )
-
 
 def ctrl_to_colors(text):
     def try_color(char):
@@ -56,7 +52,7 @@ def ctrl_to_colors(text):
     return (fg_color_id, bg_color_id)
 
 
-class LineState:
+class LineState(object):
     def __init__(self):
         self.reset()
 
@@ -91,37 +87,6 @@ def generate_span(state):
     if state.bg_color is not None and state.fg_color < 16:
         classes.append("irc-bg-%s" % state.bg_color)
     return "<span class=\"%s\">" % ' '.join(classes)
-
-
-@util.delay_template_filter('hostmask_tooltip')
-@fastcache.clru_cache(maxsize=16384)
-def hostmask_tooltip(s):
-    """Remove join/part tooltips before urlize can get to them.
-    """
-    timestamp, maybe_user, rest = s.split(' ', 2)
-    rest = escape(rest)
-
-    # I am a bad person.
-    def replace_interleave(m):
-        spaces = itertools.repeat('&#8203;')
-        user, email = m.groups()
-        return '<span class="movement-tooltip" data-toggle="tooltip" data-placement="top" title="{email}">{user}</span>'.format(
-            user=user,
-            email=''.join(itertools.chain.from_iterable(zip(
-                CTRL_REGEX.sub('', email),
-                spaces,
-            ))),
-        )
-
-    if any(rest.startswith(prefix) for prefix in ('Quits', 'Parts', 'Joins')):
-        rest = re.sub(
-            r'([^ ]+) \(([^)]+?)\)',
-            replace_interleave,
-            rest,
-            count=1,
-        )
-
-    return Markup(' ').join((timestamp, maybe_user, Markup(rest)))
 
 
 # Don't ask me why the filter name is different from the function name.
@@ -188,7 +153,13 @@ def line_style(s, line_no, is_search, network=None, ctx=None):
     """
 
     # At some point this should become yet another regex.
-    timestamp, maybe_user, rest = s.split(' ', 2)
+    timestamp, rest = s.split(' ', 1)
+    rest_split = rest.split(' ', 1)
+    if len(rest_split) == 1:
+        user, = rest_split
+        msg = ''
+    else:
+        user, msg = rest_split
 
     classes = []
     msg_user_classes = []
@@ -197,15 +168,15 @@ def line_style(s, line_no, is_search, network=None, ctx=None):
     if ctx and ctx.line_marker == ':':
         classes.append("irc-highlight")
 
-    if rest.startswith("Quits"):
+    if msg.startswith("Quits"):
         msg_user_classes.append("irc-part")
-    elif rest.startswith("Parts"):
+    elif msg.startswith("Parts"):
         msg_user_classes.append("irc-part")
-    elif rest.startswith("Joins"):
+    elif msg.startswith("Joins"):
         msg_user_classes.append("irc-join")
 
     #  escaping is done before this.
-    if rest.startswith("&gt;"):
+    if msg.startswith("&gt;"):
         msg_classes.append("irc-greentext")
 
     # Make links back to actual line if we're in search.
@@ -229,8 +200,8 @@ def line_style(s, line_no, is_search, network=None, ctx=None):
 
     return '<span class="{line_class}">' \
         '<a href="{href}" id="{id_}" class="js-line-no-highlight js-non-selectable">{timestamp}</a> ' \
-        '<span class="{msg_user_class}">{maybe_user} ' \
-        '<span class="{msg_class}">{rest}' \
+        '<span class="{msg_user_class}">{user} ' \
+        '<span class="{msg_class}">{msg}' \
         '</span>' \
         '</span>' \
         '</span>' \
@@ -240,8 +211,52 @@ def line_style(s, line_no, is_search, network=None, ctx=None):
         href=href,
         msg_user_class=' '.join(msg_user_classes),
         msg_class=' '.join(msg_classes),
-        maybe_user=maybe_user,
+        user=user,
         id_=id_,
-        rest=rest,
+        msg=msg,
     )
 
+
+@util.delay_template_filter('clinkify')
+def clinkify(s):
+    splitted = s.split(' ')
+    for i, fragment in enumerate(splitted):
+        # Remove beginning punctuation
+        begin = re.match(r'^[\(<\x03\x0f\x1f\x02]+', fragment)
+
+        if begin:
+            middle_start = begin.end()
+            begin = begin.group()
+        else:
+            middle_start = 0
+            begin = ''
+
+        # Remove end punctuation.
+        end = re.search(r'[\.,\)>\n\x04\x0F\x1F\x02]+$', fragment[middle_start:])
+
+        if end:
+            middle_end = middle_start + end.start()
+            end = end.group()
+        else:
+            middle_end = len(fragment)
+            end = ''
+
+        # Has protocol?
+        middle = fragment[middle_start:middle_end]
+        if middle.startswith(('http://', 'https://', 'www.')):
+            unclosed_parens = middle.count('(') - middle.count(')')
+            # Special case for parentheses (Wikipedia), but not brackets (Slack bridge)
+            if end and len(end) >= unclosed_parens > 0 and end[:unclosed_parens] == ')' * unclosed_parens:
+                middle += end[:unclosed_parens]
+                end = end[unclosed_parens:]
+
+            if middle.startswith('www.'):
+                href = "http://" + middle
+            else:
+                href = middle
+
+            splitted[i] = "{0}<a href=\'{1}\'>{2}</a>{3}".format(escape(begin), href, escape(middle), escape(end))
+        else:
+            splitted[i] = escape(fragment)
+
+    return ' '.join(splitted)
