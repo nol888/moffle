@@ -3,9 +3,10 @@ fastcache
 Flask
 Flask-Babel
 Flask-OAuthlib
+Flask-Restful
 Flask-WTF
 libsass
 mock
 natsort
 pytest
-git+https://github.com/unbit/uwsgi@2b3fb7373cb88e1af1c6190172f30f70bf3b100c#egg=uWSGI
+uWSGI
