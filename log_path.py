@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from collections import defaultdict
 from collections import namedtuple
 from datetime import date
 from operator import itemgetter
@@ -12,7 +11,6 @@ from natsort import ns
 import cachetools
 import fastcache
 
-from acl import AccessControl
 import config
 import exceptions
 import looseboy
@@ -25,6 +23,7 @@ LogResult = namedtuple('LogResult', ['log', 'before', 'after'])
 
 ldp = looseboy.LooseDateParser()
 
+
 @fastcache.clru_cache(maxsize=1024)
 def parse_date(date_string):
     if len(date_string) == 8:
@@ -35,10 +34,11 @@ def parse_date(date_string):
     components = map(int, components)
     return date(*components)
 
+
 class LogPath:
 
-    def __init__(self):
-        self.ac = AccessControl(config.ACL)
+    def __init__(self, ac):
+        self.ac = ac
 
     def networks(self):
         base_contents = os.listdir(config.LOG_BASE)
@@ -203,11 +203,9 @@ class LogPath:
 
         return file_matches
 
+
 class DirectoryDelimitedLogPath(LogPath):
     LOG_SUFFIX = '.log'
-
-    def __init__(self):
-        super(DirectoryDelimitedLogPath, self).__init__()
 
     def channel_dates(self, network, channel):
         dates = self._dates_list(network, channel)
@@ -317,8 +315,8 @@ class DirectoryDelimitedLogPath(LogPath):
 
         files = os.listdir(channel_base)
         files = [{
-            'channel' : channel,
-            'date': filename[:-1*len(DirectoryDelimitedLogPath.LOG_SUFFIX)],
+            'channel': channel,
+            'date': filename[:-1 * len(DirectoryDelimitedLogPath.LOG_SUFFIX)],
             'filename': os.path.join(channel_base, filename)
         } for filename in files if filename.endswith(DirectoryDelimitedLogPath.LOG_SUFFIX)]
 
@@ -326,6 +324,7 @@ class DirectoryDelimitedLogPath(LogPath):
             f['date_obj'] = parse_date(f['date'])
 
         return files
+
 
 class ZNC16DirectoryDelimitedLogPath(DirectoryDelimitedLogPath):
     # Assume people are creating user-per-network. If they aren't they can subclass
@@ -378,8 +377,6 @@ class ZNC16DirectoryDelimitedLogPath(DirectoryDelimitedLogPath):
             raise exceptions.NoResultsException()
         elif parsed_date != date:
             raise exceptions.CanonicalNameException(util.Scope.DATE, parsed_date)
-
-
 
         # Reverse the human-friendly ordering here.
         channel_dates = self.channel_dates(network, channel)[::-1]
