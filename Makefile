@@ -11,7 +11,12 @@ UWSGI_LOG = uwsgi.log
 
 # None of your business
 
-BASEDIR = $(shell readlink -f .)
+ifeq ($(shell uname -s),Linux)
+    READLINK = readlink
+else
+    READLINK = greadlink
+endif
+BASEDIR = $(shell $(READLINK) -f .)
 PIDPATH = $(BASEDIR)/$(PIDFILE)
 VENV = $(BASEDIR)/$(VENV_NAME)
 BIN = $(VENV)/bin/uwsgi

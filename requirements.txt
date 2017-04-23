@@ -1,4 +1,6 @@
 cachetools<2
+elasticsearch
+elasticsearch-dsl
 fastcache
 Flask
 Flask-Babel

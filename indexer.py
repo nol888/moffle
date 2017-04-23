@@ -36,25 +36,24 @@ def configure(es, delete_index):
     else:
         log("Creating index")
 
-        # TODO: define date as date... maybe?
-        es.indices.create(
-            index='moffle',
-            body={
-                'mappings': {
-                    'logline': {
-                        '_all': {'enabled': False},
-                        'properties': {
-                            'date': {'type': 'keyword'},
-                            'time': {'type': 'keyword'},
-                            'network': {'type': 'keyword'},
-                            'channel': {'type': 'keyword'},
-                            'line_no': {'type': 'integer'},
-                            'line_type': {'type': 'keyword'},
-                        },
+    es.indices.create(
+        index='moffle',
+        body={
+            'mappings': {
+                'logline': {
+                    '_all': {'enabled': False},
+                    'properties': {
+                        'date': {'type': 'date'},
+                        'time': {'type': 'keyword', 'index': 'no'},
+                        'network': {'type': 'keyword'},
+                        'channel': {'type': 'keyword'},
+                        'line_no': {'type': 'integer'},
+                        'line_type': {'type': 'keyword'},
                     },
                 },
             },
-        )
+        },
+    )
 
 
 def index_single(es, network, channel, date, lines):

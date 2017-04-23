@@ -9,6 +9,12 @@ LOG_BASE = "/path/to/znc/users"
 # Most people will not worry about this.
 LOG_PATH_CLASS = "LogPath"
 
+# If you want to use an alternative search backend, or an alternative grep executable,
+# set the implementation class or executable name here.
+GREP_BUILDER_CLASS = "GrepBuilder"
+GREP = "grep"
+ES_HOST = "localhost"
+
 # Whether or not Flask is behind a HTTP proxy.
 # Affects whether or not we insert proxy middleware.
 FLASK_PROXY = True
@@ -38,6 +44,7 @@ LOCALE_PREFER = ['ja', 'en']
 
 # Debug options you shouldn't touch
 DEBUG_PROFILER = False
+DEBUG_PYINSTRUMENT = False
 
 # Map of API users to their secret key as a byte string.
 API_KEYS = {

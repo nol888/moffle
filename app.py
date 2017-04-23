@@ -35,8 +35,6 @@ if config.DEBUG_PYINSTRUMENT:
 
 app = Flask(__name__)
 babel = Babel(app)
-paths = getattr(log_path, config.LOG_PATH_CLASS)()
-grep = GrepBuilder(paths)
 
 
 @app.route('/')

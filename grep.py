@@ -238,22 +238,25 @@ def _process_hit(split):
 
 class ESGrepBuilder:
 
+    LINE_FORMATTERS = {
+        'normal': lambda line: '[{0.time}] <{0.author}> {0.text}'.format(line),
+        'action': lambda line: '[{0.time}] * {0.author} {0.text}'.format(line),
+        'join': lambda line: '[{0.time}] *** Joins: {0.author} {0.text}'.format(line),
+        'part': lambda line: '[{0.time}] *** Parts: {0.author} {0.text}'.format(line),
+        'quit': lambda line: '[{0.time}] *** Quits: {0.author} {0.text}'.format(line),
+    }
+
     def __init__(self, _):
-        self.es = Elasticsearch(['localhost'])
+        self.es = Elasticsearch([config.ES_HOST])
 
     def _format_line(self, line, is_hit):
-        if line.line_type == 'normal':
-            text = '[{0.time}] <{0.author}> {0.text}'.format(line)
-        elif line.line_type == 'action':
-            text = '[{0.time}] * {0.author} {0.text}'.format(line)
-
         # network??
         return Line(
             channel=line.channel,
             date=line.date,
             line_marker=':' if is_hit else '-',
             line_no=line.line_no,
-            line=text,
+            line=self.LINE_FORMATTERS[line.line_type](line),
         )
 
     def max_segment(self, oldest):
@@ -276,10 +279,15 @@ class ESGrepBuilder:
         assert date_range
         date_begin, date_end = date_range
 
+        hits = []
+
         result = Search(
             using=self.es, index='moffle',
         ).query(
-            "match", text=query,
+            "query_string",
+            query=query,
+            default_field='text',
+            default_operator='AND',
         ).query(
             "range", date={
                 'gt': date_begin.strftime('%Y%m%d'),
@@ -293,42 +301,59 @@ class ESGrepBuilder:
             "terms", channel=channels,
         ).sort(
             "-date",
+            "-line_no",
         )[:10000].execute()
 
-        hits = []
-        # TODO: interval merging
+        # Context searching doesn't work very well if we have no results
+        if not result:
+            return hits
+
+        # Business hour merge!!!!
+        merged_results = []
+        current_context_group = [result[0]]
+        for hit in result[1:]:
+            last_hit = current_context_group[0]
+            if (hit.date == last_hit.date and
+                    last_hit.line_no - config.SEARCH_CONTEXT <= hit.line_no + config.SEARCH_CONTEXT):
+                current_context_group.insert(0, hit)
+            else:
+                merged_results.append(current_context_group)
+                current_context_group = [hit]
+        merged_results.append(current_context_group)
+
         ctx_search = MultiSearch(using=self.es, index='moffle')
-        for hit in result:
+        for hit_group in merged_results:
             # Fetch context
             ctx_search = ctx_search.add(Search(
                 using=self.es,
                 index='moffle',
             ).query(
                 "range", line_no={
-                    "gte": hit.line_no - config.SEARCH_CONTEXT,
-                    "lte": hit.line_no + config.SEARCH_CONTEXT,
+                    "gte": hit_group[0].line_no - config.SEARCH_CONTEXT,
+                    "lte": hit_group[-1].line_no + config.SEARCH_CONTEXT,
                 },
             ).filter(
-                "term", network=hit.network,
+                "term", network=hit_group[0].network,
             ).filter(
-                "term", channel=hit.channel,
+                "term", channel=hit_group[0].channel,
             ).filter(
-                "term", date=hit.date,
+                "term", date=hit_group[0].date,
             ).sort(
                 "line_no",
-            ))
+            )[:10000])
 
         ctx_results = ctx_search.execute()
-        for hit, ctx_result in zip(result, ctx_results):
+        for hit_group, ctx_result in zip(merged_results, ctx_results):
+            hit_line_nos = set(hit.line_no for hit in hit_group)
             lines = []
             for ctx_hit in ctx_result:
                 lines.append(self._format_line(
                     ctx_hit,
-                    is_hit=(hit.line_no == ctx_hit.line_no),
+                    is_hit=ctx_hit.line_no in hit_line_nos,
                 ))
             hit = Hit(
-                channel=hit.channel,
-                date=hit.date,
+                channel=hit_group[0].channel,
+                date=hit_group[0].date,
                 begin=lines[0].line_no,
                 lines=lines,
             )
