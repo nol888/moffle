@@ -1,7 +1,9 @@
-{% macro header_text_search(network, channel, placeholder, value='') -%}
+{% macro header_text_search(network, channels, placeholder, value='') -%}
 <form class="header-search form-inline pull-right" role="search" action="/search">
     <input type="hidden" name="network" value="{{ network }}">
+    {% for channel in channels %}
     <input type="hidden" name="channel" value="{{ channel }}">
+    {% endfor %}
 
     <div class="form-group">
         <div class="input-group">
@@ -16,7 +18,7 @@
 </form>
 {% endmacro %}
 
-{% macro advanced_search(network, channel, author='', query='') -%}
+{% macro advanced_search(network, channels, author='', query='') -%}
 <div class="modal fade" id="advanced-search" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -27,7 +29,9 @@
             <form class="form-inline" role="search" action="/search">
                 <div class="modal-body">
                     <input type="hidden" name="network" value="{{ network }}">
+                    {% for channel in channels %}
                     <input type="hidden" name="channel" value="{{ channel }}">
+                    {% endfor %}
 
                     <div class="row">
                         <div class="col-sm-3">

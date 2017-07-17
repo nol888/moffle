@@ -231,7 +231,7 @@ class DirectoryDelimitedLogPath(LogPath):
         # This behavior is slightly different from elsewhere.
         channels = [ch for ch in channels if self.ac.evaluate(network, ch)]
 
-        files = chain.from_iterable([self._dates_list(network, ch) for ch in channels])
+        files = chain.from_iterable(filter(None, (self._dates_list(network, ch) for ch in channels)))
 
         return sorted(files, key=itemgetter('date_obj'), reverse=True)
 

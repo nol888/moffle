@@ -1,3 +1,5 @@
+import json
+
 import monkey_patch  # noqa
 
 from babel import negotiate_locale
@@ -126,12 +128,11 @@ log_ = log
 
 @app.route('/search/')
 def search():
-    # TODO: Expose multi-channel search
     form = SearchForm(request.args, csrf_enabled=False)
     valid = form.validate()
 
     network = form.network.data
-    channel = form.channel.data
+    channels = request.args.getlist('channel')
 
     if config.SEARCH_AJAX_ENABLED:
         if not valid:
@@ -139,15 +140,24 @@ def search():
             abort(404)
 
         try:
-            dates = paths.channels_dates(network, [channel])
+            dates = paths.channels_dates(network, channels)
         except exceptions.NoResultsException:
             abort(404)
         except exceptions.MultipleResultsException:
-            return render_template('error/multiple_results.html', network=network, channel=channel)
+            return render_template('error/multiple_results.html', network=network, channel=channels[0])
 
         max_segment = grep.max_segment(dates[-1]['date_obj'])
 
-        return render_template('search_ajax.html', valid=valid, form=form, network=network, channel=channel, author=form.author.data, query=form.text.data, max_segment=max_segment)
+        return render_template(
+            'search_ajax.html',
+            valid=valid,
+            form=form,
+            network=network,
+            channels=channels,
+            author=form.author.data,
+            query=json.dumps(form.text.data),
+            max_segment=max_segment,
+        )
 
     else:
         # We should have another copy of this to use...
@@ -155,13 +165,13 @@ def search():
             results = []
         else:
             results = grep.run(
-                channels=[channel],
+                channels=channels,
                 network=network,
                 author=form.author.data,
                 query=form.text.data,
             )
 
-        return render_template('search.html', valid=valid, form=form, network=network, channel=channel, results=results)
+        return render_template('search.html', valid=valid, form=form, network=network, channel=channels[0], results=results)
 
 
 @app.route('/search/chunk')
@@ -176,7 +186,7 @@ def search_ajax_chunk():
         results = []
     else:
         results = grep.run(
-            channels=[form.channel.data],
+            channels=request.args.getlist('channel'),
             network=form.network.data,
             author=form.author.data,
             query=form.text.data,

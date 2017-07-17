@@ -12,8 +12,8 @@
         <li><a href="{{ url_for('network', network=network) }}">{{ network }}</a></li>
     {% endif %}
 
-    {% if channel %}
-        <li><a href="{{ url_for('channel', network=network, channel=channel) }}">{{ channel }}</a></li>
+    {% if channels | length == 1 %}
+        <li><a href="{{ url_for('channel', network=network, channel=channels[0]) }}">{{ channels[0] }}</a></li>
     {% endif %}
 
     <li class="active"><a href="{{ encoded_path }}">{{ format_search_title(form.text.data) }}</a></li>
@@ -21,14 +21,14 @@
 
 {% block js_init %}
     {{ super() }}
-    new AjaxSearch("{{ network }}", "{{ channel }}", "{{ author }}", "{{ query | escapejs }}", {{ max_segment }});
+    new AjaxSearch("{{ network }}", {{ channels | safe }}, "{{ author }}", {{ query | safe }}, {{ max_segment }});
     new MovementTooltip();
     new MaybeRemoveTimestamps();
 {% endblock %}
 
 {% block content %}
 
-    {{ advanced_search(network, channel, form.author.data, form.text.data) }}
+    {{ advanced_search(network, channels, form.author.data, form.text.data) }}
 
     <h1 class="page-header">
         <span class="property">
@@ -46,13 +46,13 @@
             </span>
         {% endif %}
 
-        {% if channel %}
+        {% if channels | length == 1 %}
             <span class="property">
-                <span class="glyphicon glyphicon-list"></span> {{ channel }}
+                <span class="glyphicon glyphicon-list"></span> {{ channels[0] }}
             </span>
         {% endif %}
         
-        {{ header_text_search(network, channel, _('text search'), form.text.data) }}
+        {{ header_text_search(network, channels, _('text search'), form.text.data) }}
 
     </h1>
 

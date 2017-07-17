@@ -107,13 +107,13 @@ AjaxSearch.prototype.onSuccess = function(html) {
 AjaxSearch.prototype.setupAjax = function() {
     $.ajax({
         url: "/search/chunk",
-        data: {
+        data: $.param({
             network: this.network,
             channel: this.channels,
             author: this.author,
             text: this.query,
             segment: this.segment
-        }
+        }, true)
     }).done($.proxy(this.onSuccess, this));
 };
 

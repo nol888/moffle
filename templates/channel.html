@@ -12,7 +12,7 @@
 
 {% block content %}
 
-    {{ advanced_search(network, channel) }}
+    {{ advanced_search(network, [channel]) }}
 
     <h1 class="page-header clearfix">
         <span class="property">
@@ -34,7 +34,7 @@
             </div>
         </form>
 
-        {{ header_text_search(network, channel, _('search %(channel)s', channel=channel)) }}
+        {{ header_text_search(network, [channel], _('search %(channel)s', channel=channel)) }}
 
     </h1>
 

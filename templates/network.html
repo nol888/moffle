@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "forms.html" import multi_channel_search %}
 
 {% block title %}
     {{ format_title(network) }}
@@ -28,6 +29,12 @@
             </div>
         </form>
     </h1>
+
+    <form class="network-search-form" role="search">
+        <div class="form-group">
+            <input type="text" class="form-control input-lg" placeholder="{{ _('search %(network)s', network=network) }}">
+        </div>
+    </form>
 
     <div class="js-channels">
         {% for channel in channels %}
