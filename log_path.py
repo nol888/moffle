@@ -111,6 +111,9 @@ class LogPath:
 
         return sorted(files, key=itemgetter('date_obj'), reverse=True)
 
+    def date_to_path(self, network, channel, date):
+        raise NotImplementedError()
+
     def log(self, network, channel, date):
         matches = self._channels_list(network)
 
@@ -294,6 +297,10 @@ class DirectoryDelimitedLogPath(LogPath):
     def channel_to_path(self, network, channel):
         return os.path.join(self.network_to_path(network), channel)
 
+    def date_to_path(self, network, channel, date):
+        return os.path.join(self.channel_to_path(network, channel),
+                            date + DirectoryDelimitedLogPath.LOG_SUFFIX)
+
     # This lets us use LogPath.channels instead of reimplementing.
     @cachetools.ttl_cache(maxsize=128, ttl=21600)
     def _channels_list(self, network):
@@ -403,3 +410,10 @@ class ZNC16DirectoryDelimitedLogPath(DirectoryDelimitedLogPath):
         log_file = enumerate(open(log_path, errors='ignore').readlines(), start=1)
 
         return LogResult(log_file, before, after)
+
+    def date_to_path(self, network, channel, date):
+        # Convert the no-dash presentation date...
+        date = date[0:4] + '-' + date[4:6] + '-' + date[6:8]
+        return os.path.join(self.channel_to_path(network, channel),
+                            date + DirectoryDelimitedLogPath.LOG_SUFFIX)
+
